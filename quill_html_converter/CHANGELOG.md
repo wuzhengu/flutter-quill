@@ -2,8 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## 9.0.3
+* Flutter Quill Extensions:
+  * Fix file image support for web image emebed builder
+
 ## 9.0.2
-* Release instead of pre-release
+* Remove unused properties in the `QuillToolbarSelectHeaderStyleDropdownButton`
+* Fix the `QuillSimpleToolbar` when `useMaterial3` is false, please upgrade to the latest version of flutter for better support
 
 ## 9.0.2-dev.3
 * Export `QuillSingleChildScrollView`
