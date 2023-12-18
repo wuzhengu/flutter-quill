@@ -1,12 +1,15 @@
-import 'dart:convert' show jsonEncode;
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
+import 'package:flutter_quill/markdown_quill.dart';
+import 'package:flutter_quill/quill_delta.dart';
 import 'package:flutter_quill_extensions/flutter_quill_extensions.dart'
     show FlutterQuillEmbeds, QuillSharedExtensionsConfigurations;
 import 'package:quill_html_converter/quill_html_converter.dart';
 import 'package:share_plus/share_plus.dart' show Share;
 
+import '../../misc/dialog.dart';
 import '../extensions/scaffold_messenger.dart';
 import '../shared/widgets/home_screen_button.dart';
 import 'my_quill_editor.dart';
@@ -67,19 +70,42 @@ class _QuillScreenState extends State<QuillScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final loaders = <String, List>{
+      'JSON': [
+        (Delta delta) => JsonEncoder.withIndent('  ').convert(delta.toJson()),
+        (String text) => Delta.fromJson(jsonDecode(text)),
+        Icons.data_object,
+      ],
+      'HTML': [
+        (Delta delta) => delta.toHtml(),
+        (String text) => DeltaX.fromHtml(text),
+        Icons.html,
+      ],
+      'MARKDOWN': [
+        (Delta delta) => htmlToMarkdown(delta.toHtml()),
+        (String text) => MarkdownToDelta(markdownDocument: mdDocument).convert(text),
+        Icons.edit,
+      ],
+    };
     return Scaffold(
       appBar: AppBar(
         title: const Text('Flutter Quill'),
         actions: [
-          IconButton(
-            tooltip: 'Load with HTML',
-            onPressed: () {
-              final html = _controller.document.toDelta().toHtml();
-              _controller.document =
-                  Document.fromDelta(DeltaX.fromHtml(html));
-            },
-            icon: const Icon(Icons.html),
-          ),
+          ...loaders.entries.map((e) {
+            return IconButton(
+              tooltip: 'Load with ${e.key}',
+              onPressed: () async {
+                String? text = e.value[0](_controller.document.toDelta());
+
+                text = await showEditDialog(context, title: 'Load with ${e.key}', content: text);
+                if (text == null) return;
+
+                _controller.document =
+                    text.isEmpty ? Document() : Document.fromDelta(e.value[1](text));
+              },
+              icon: Icon(e.value[2]),
+            );
+          }),
           IconButton(
             tooltip: 'Share',
             onPressed: () {
@@ -95,18 +121,6 @@ class _QuillScreenState extends State<QuillScreen> {
               Share.share(plainText);
             },
             icon: const Icon(Icons.share),
-          ),
-          IconButton(
-            tooltip: 'Print to log',
-            onPressed: () {
-              print(
-                jsonEncode(_controller.document.toDelta().toJson()),
-              );
-              ScaffoldMessenger.of(context).showText(
-                'The quill delta json has been printed to the log.',
-              );
-            },
-            icon: const Icon(Icons.print),
           ),
           const HomeScreenButton(),
         ],
@@ -146,8 +160,7 @@ class _QuillScreenState extends State<QuillScreen> {
     return const QuillSharedConfigurations(
       // locale: Locale('en'),
       extraConfigurations: {
-        QuillSharedExtensionsConfigurations.key:
-            QuillSharedExtensionsConfigurations(
+        QuillSharedExtensionsConfigurations.key: QuillSharedExtensionsConfigurations(
           assetsPrefix: 'assets', // Defaults to assets
         ),
       },
