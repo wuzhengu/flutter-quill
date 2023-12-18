@@ -3,6 +3,9 @@ import 'package:markdown/markdown.dart';
 
 String htmlToMarkdown(String html) {
   final rules = [
+    html2md.Rule('lineBreak', filters: ['br'], replacement: (content, node) {
+      return '${node.outerHTML}\n';
+    }),
     html2md.Rule('image', filters: ['img'], replacement: (content, node) {
       node.asElement()?.attributes.remove('class');
       //Later we can convert this to delta along with the attributes by GoodInlineHtmlSyntax
