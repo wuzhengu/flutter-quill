@@ -18,8 +18,32 @@ String htmlToMarkdown(String html) {
 Document get mdDocument {
   return Document(
     encodeHtml: false,
+    withDefaultBlockSyntaxes: false,
+    blockSyntaxes: standardBlockSyntaxes,
     inlineSyntaxes: inlineSyntaxes,
   );
+}
+
+Iterable<BlockSyntax>? _standardBlockSyntaxes;
+
+Iterable<BlockSyntax> get standardBlockSyntaxes {
+  return _standardBlockSyntaxes ??= BlockParser([], Document()).standardBlockSyntaxes.map((e) {
+    if (e is HtmlBlockSyntax) e = GoodHtmlBlockSyntax();
+    return e;
+  });
+}
+
+/// Exclude the 'img'
+class GoodHtmlBlockSyntax extends HtmlBlockSyntax {
+  @override
+  bool canParse(BlockParser parser) {
+    var ok = super.canParse(parser);
+    if (ok) {
+      //Leave the 'img' to be handled by GoodInlineHtmlSyntax
+      ok = !parser.current.content.startsWith(RegExp(r'\s*<img '));
+    }
+    return ok;
+  }
 }
 
 Iterable<InlineSyntax>? _inlineSyntaxes;
